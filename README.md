@@ -1,5 +1,8 @@
 # PDF → Markdown Converter
 
+> ⚠️ **Work in Progress**
+> This project is under active development. Currently, **only the Simple mode** (PDF → Markdown via MarkItDown) has been tested and verified. The *LLM* and *LLM-OCR* modes are implemented but not yet validated — features, interfaces, and behavior may change without notice.
+
 Cross-platform desktop app (Windows / Linux / macOS) with three conversion modes.
 
 ## Requirements
@@ -8,7 +11,34 @@ Cross-platform desktop app (Windows / Linux / macOS) with three conversion modes
 - [Ollama](https://ollama.com) (for the LLM modes)
 - [Poppler](https://poppler.freedesktop.org/) (for the LLM-OCR mode)
 
-### Installing Poppler
+## Modes
+
+| Mode | Description | Ollama required | Status |
+|---|---|---|---|
+| ⚡ Simple | Rule-based MarkItDown, fast | No | ✅ tested |
+| 🧠 LLM | MarkItDown + LLM for image descriptions | Yes (multimodal model, e.g. llava) | ⚠️ untested |
+| 🔍 LLM-OCR | Pages as image → LLM (ideal for scans) | Yes (multimodal model, e.g. llava) | ⚠️ untested |
+
+## Python setup
+
+Install the Python dependencies and launch the application. This step is sufficient to run the **Simple mode** — no further tools are required.
+
+### Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+### Running
+
+```bash
+python main.py
+```
+
+## Installing Poppler
+
+> ℹ️ **Only required for the LLM and LLM-OCR modes.**
+> If you only intend to use the **Simple mode**, you can skip both the Poppler setup below and the Ollama installation — Simple mode runs without any external tools beyond the Python dependencies installed above.
 
 **Windows:**
 ```
@@ -31,26 +61,6 @@ sudo apt install poppler-utils
 brew install poppler
 ```
 
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-## Running
-
-```bash
-python main.py
-```
-
-## Modes
-
-| Mode | Description | Ollama required |
-|---|---|---|
-| ⚡ Simple | Rule-based MarkItDown, fast | No |
-| 🧠 LLM | MarkItDown + LLM for image descriptions | Yes (multimodal model, e.g. llava) |
-| 🔍 LLM-OCR | Pages as image → LLM (ideal for scans) | Yes (multimodal model, e.g. llava) |
-
 ## Recommended Ollama models
 
 ```bash
@@ -59,7 +69,12 @@ ollama pull llava-phi3     # smaller, faster
 ollama pull llama3.2       # text-only, for Simple/text PDFs
 ```
 
-## AMD RX 9070 XT (ROCm)
+## GPU acceleration with AMD (ROCm)
+
+Ollama supports hardware acceleration on AMD GPUs via [ROCm](https://rocm.docs.amd.com/).
+Before proceeding, verify that your GPU is listed as supported in the official
+[ROCm hardware compatibility matrix](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html)
+and that your kernel/driver stack meets the ROCm prerequisites.
 
 ### Fedora (recommended)
 
@@ -90,3 +105,5 @@ docker run -d --device /dev/kfd --device /dev/dri \
   -v ollama:/root/.ollama -p 11434:11434 \
   --name ollama ollama/ollama:rocm
 ```
+
+> ℹ️ For NVIDIA GPUs, use the standard `ollama/ollama` image together with the NVIDIA Container Toolkit instead; see the [Ollama Docker documentation](https://hub.docker.com/r/ollama/ollama).
