@@ -1,8 +1,5 @@
 # PDF → Markdown Converter
 
-> ⚠️ **Work in Progress**
-> This project is under active development. All three modes (Simple, LLM, LLM-OCR) have been tested — features, interfaces, and behavior may still change without notice.
-
 Cross-platform desktop app (Windows / Linux / macOS) with three conversion modes.
 
 ## Requirements
