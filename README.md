@@ -2,6 +2,8 @@
 
 Cross-platform desktop app (Windows / Linux / macOS) with three conversion modes.
 
+![PDF → Markdown Converter user interface](pictures/ui_pic.png)
+
 ## Requirements
 
 - Python 3.10+
