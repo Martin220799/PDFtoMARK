@@ -1,8 +1,8 @@
-# PDF → Markdown Converter
+# PDF to Markdown Converter
 
 Cross-platform desktop app (Windows / Linux / macOS) with three conversion modes.
 
-![PDF → Markdown Converter user interface](pictures/ui_pic.png)
+![PDF to Markdown Converter user interface](pictures/ui_pic.png)
 
 ## Requirements
 
@@ -38,5 +38,5 @@ python main.py
 
 > ℹ️ **Only required for the LLM and LLM-OCR modes.** Simple mode runs without any external tools beyond the Python dependencies above.
 
-- **Ollama** — required for both LLM modes. See the official [installation guide](https://ollama.com/download) (the Linux install script also sets up GPU acceleration automatically where supported). Then pull a multimodal model, e.g. `ollama pull qwen3-vl:8b`.
-- **Poppler** — additionally required for LLM-OCR mode (renders PDF pages to images). See the [Poppler downloads page](https://poppler.freedesktop.org/); on most systems it ships as `poppler-utils` (`sudo dnf install poppler-utils`, `sudo apt install poppler-utils`, or `brew install poppler`).
+- **Ollama** - required for both LLM modes. See the official [installation guide](https://ollama.com/download) (the Linux install script also sets up GPU acceleration automatically where supported). Then pull a multimodal model, e.g. `ollama pull qwen3-vl:8b`.
+- **Poppler** - additionally required for LLM-OCR mode (renders PDF pages to images). See the [Poppler downloads page](https://poppler.freedesktop.org/); on most systems it ships as `poppler-utils` (`sudo dnf install poppler-utils`, `sudo apt install poppler-utils`, or `brew install poppler`).
