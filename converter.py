@@ -37,17 +37,39 @@ class ConvertWorker(QThread):
             self.log_message.emit(f"▶ Processing: {Path(fpath).name}")
             try:
                 md = self._convert(fpath)
-                # Save
-                out_name = Path(fpath).stem + ".md"
-                out_path = Path(self.output_dir) / out_name
-                out_path.write_text(md, encoding="utf-8")
-                self.file_done.emit(fpath, md, True)
-                self.log_message.emit(f"  ✓ Saved: {out_path.name}")
+                if not (md and md.strip()):
+                    # Nothing was extracted. For the text-based modes this
+                    # almost always means a scanned/image-only PDF (no text
+                    # layer) — point the user at LLM-OCR instead of writing an
+                    # empty .md and silently reporting success.
+                    hint = self._empty_hint()
+                    self.log_message.emit(f"  ✗ No content extracted. {hint}")
+                    self.file_done.emit(
+                        fpath, f"No content could be extracted.\n\n{hint}", False
+                    )
+                else:
+                    out_name = Path(fpath).stem + ".md"
+                    out_path = Path(self.output_dir) / out_name
+                    out_path.write_text(md, encoding="utf-8")
+                    self.file_done.emit(fpath, md, True)
+                    self.log_message.emit(f"  ✓ Saved: {out_path.name}")
             except Exception as e:
                 self.file_done.emit(fpath, str(e), False)
                 self.log_message.emit(f"  ✗ Error: {e}")
             self.progress.emit(i + 1, total)
         self.finished.emit()
+
+    def _empty_hint(self):
+        """A mode-specific explanation for why a conversion produced no text."""
+        if self.mode in ("simple", "llm"):
+            return (
+                "This looks like a scanned / image-only PDF (no text layer). "
+                "Try the 'LLM-OCR' mode, which reads each page as an image."
+            )
+        return (
+            "The model returned no text for any page. Check that the selected "
+            "model is multimodal (vision-capable) and that Ollama is running."
+        )
 
     def _convert(self, fpath):
         if self.mode == "simple":
@@ -83,6 +105,12 @@ class ConvertWorker(QThread):
         pages = convert_from_path(fpath, dpi=200)
         md_parts = []
 
+        prompt = (
+            "Extract the full content of this page as structured Markdown. "
+            "Use #/##/### for headings, Markdown tables for tables, "
+            "and lists for bullet points. Output only Markdown, no commentary."
+        )
+
         for i, page in enumerate(pages):
             if self._stop:
                 break
@@ -91,34 +119,32 @@ class ConvertWorker(QThread):
             page.save(buf, format="PNG")
             img_b64 = base64.b64encode(buf.getvalue()).decode()
 
+            # Ollama's native /api/chat is used (not the OpenAI-compatible
+            # endpoint) because it accepts `options.num_ctx`. A rendered page
+            # image consumes ~3000 tokens, so the default 4096-token context
+            # leaves no room for the answer — and multimodal "thinking" models
+            # (e.g. qwen3-vl) overflow it while reasoning and return empty
+            # content. A larger context gives room for image + reasoning +
+            # output. Reasoning goes to a separate `thinking` field, so we fall
+            # back to it if `content` comes back empty.
             payload = {
                 "model": self.model,
                 "messages": [{
                     "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": (
-                                "Extract the full content of this page as structured Markdown. "
-                                "Use #/##/### for headings, Markdown tables for tables, "
-                                "and lists for bullet points. Output only Markdown, no commentary."
-                            )
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
-                        }
-                    ]
+                    "content": prompt,
+                    "images": [img_b64],
                 }],
-                "stream": False
+                "stream": False,
+                "options": {"num_ctx": 8192, "num_predict": 4096},
             }
             r = requests.post(
-                f"{self.ollama_url}/v1/chat/completions",
+                f"{self.ollama_url}/api/chat",
                 json=payload,
-                timeout=120
+                timeout=300
             )
             r.raise_for_status()
-            content = r.json()["choices"][0]["message"]["content"]
+            msg = r.json().get("message", {})
+            content = (msg.get("content") or "").strip() or (msg.get("thinking") or "").strip()
             md_parts.append(f"<!-- Page {i+1} -->\n\n{content}")
 
         return "\n\n---\n\n".join(md_parts)
